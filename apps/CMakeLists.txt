@@ -83,6 +83,8 @@ target_link_libraries(select_test PRIVATE OpenCL::OpenCL)
 add_executable(simple_image ./Ch6/simple_image.c)
 target_link_libraries(simple_image PRIVATE OpenCL::OpenCL)
 target_link_libraries(simple_image PRIVATE PNG::PNG)
+target_link_libraries(simple_image PRIVATE util)
+target_include_directories(simple_image PRIVATE ../libs/util/)
 
 # # Ch6 (interp)
 # add_executable(interp ./Ch6/interp.c)

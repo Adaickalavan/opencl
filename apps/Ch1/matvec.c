@@ -98,9 +98,13 @@ int main() {
    }
 
    /* Enqueue the command queue to the device */
-   work_units_per_kernel = 4; /* 4 work-units per kernel */ 
-   err = clEnqueueNDRangeKernel(queue, kernel, 1, NULL, &work_units_per_kernel, 
-      NULL, 0, NULL, NULL);
+   const size_t dim = 1;
+   size_t global_size[dim];
+   global_size[0] = 4;
+   size_t* global_offset = NULL;
+   size_t* local_size = NULL;
+   err = clEnqueueNDRangeKernel(queue, kernel, dim, global_offset,
+         global_size, local_size, 0, NULL, NULL);
    if(err < 0) {
       perror("Couldn't enqueue the kernel execution command");
       exit(1);   

@@ -54,6 +54,7 @@ cl_device_id create_device(){
    return device;
 }
 
+/* Create program from a file and compile it */
 cl_program createProgramFromFile(int numFiles, const char* fileNames[numFiles], cl_context context, cl_device_id device, const char* options)
 {
    FILE* program_handle;
