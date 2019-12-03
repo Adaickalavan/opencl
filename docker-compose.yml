@@ -1,0 +1,17 @@
+version: '3'
+services:
+
+  opencl:
+    image: opencl
+    container_name: opencl   
+    restart: on-failure #Ensures that intermittent failures in the Docker environment do not result in unnecessary failures of the service.
+    environment:
+      - ENVVAR=successfully retrieved env variable
+      - DISPLAY=$DISPLAY
+    devices:
+      - /dev/dri:/dev/dri
+    volume:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    # Name of executable to be run
+    command: ["/src/bin/matvec"]
+  
