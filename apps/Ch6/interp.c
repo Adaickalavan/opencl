@@ -7,8 +7,8 @@
 #define PNG_DEBUG 3
 #include <png.h>
 
-#define INPUT_FILE "input.png"
-#define OUTPUT_FILE "output.png"
+#define INPUT_FILE "./apps/Ch6/interp_input.png"
+#define OUTPUT_FILE "./apps/Ch6/interp_output.png"
 
 #include <stdio.h>
 #include <stdlib.h>

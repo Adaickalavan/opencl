@@ -6,8 +6,8 @@
 #define PNG_DEBUG 3
 #include <png.h>
 
-#define INPUT_FILE "./apps/Ch6/blank.png"
-#define OUTPUT_FILE "./apps/Ch6/output.png"
+#define INPUT_FILE "./apps/Ch6/simple_image_input.png"
+#define OUTPUT_FILE "./apps/Ch6/simple_image_output.png"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,11 +39,26 @@ void read_image_data(const char* filename, png_bytep* data, size_t* w, size_t* h
    *w = png_get_image_width(png_ptr, info_ptr);
    *h = png_get_image_height(png_ptr, info_ptr);
 
+   png_size_t sz = png_get_rowbytes(png_ptr, info_ptr);
+   png_byte channels = png_get_channels(png_ptr, info_ptr);
+   png_byte color_type = png_get_color_type(png_ptr, info_ptr);
+   png_byte bit_depth = png_get_bit_depth(png_ptr, info_ptr);
+   printf("Input image row size = %ld bytes\n",sz);
+   printf("Input image channels = %d \n",channels);
+   printf("Input image color type = %d \n",color_type);
+   printf("Input image bit depth = %d bits\n",(uint16_t)(bit_depth));
+
    /* Allocate memory and read image data */
-   *data = malloc(*h * png_get_rowbytes(png_ptr, info_ptr));
+   *data = malloc(*h * png_get_rowbytes(png_ptr, info_ptr));   
    for(i=0; i<*h; i++) {
-      png_read_row(png_ptr, *data + i * png_get_rowbytes(png_ptr, info_ptr), NULL);
+      png_read_row(png_ptr, *data + i * sz, NULL);
    }
+
+   png_bytepp row_pointers = png_get_rows(png_ptr, info_ptr);
+   for(int j=0; j<*h; j++){
+      printf("%hhn .. ",*(row_pointers[j]));
+   }
+   printf("\n");
 
    /* Close input file */
    png_read_end(png_ptr, info_ptr);
@@ -88,7 +103,7 @@ int main(int argc, char **argv) {
    cl_command_queue queue;
    cl_program program;
    const char* fileNames[] = {PROGRAM_FILE};
-   const char options[] = "";  
+   const char options[] = "-cl-no-signed-zeros";  
    cl_kernel kernel;
    cl_int err;
    size_t global_size[2];
@@ -99,6 +114,10 @@ int main(int argc, char **argv) {
    cl_mem input_image, output_image;
    size_t origin[3], region[3];
    size_t width, height;
+
+   /* Data and buffers */
+   float test[16];      
+   cl_mem test_buffer;
 
    /* Open input file and read image data */
    read_image_data(INPUT_FILE, &pixels, &width, &height);
@@ -121,7 +140,7 @@ int main(int argc, char **argv) {
    };
 
    /* Create image object */
-   png_format.image_channel_order = CL_LUMINANCE;
+   png_format.image_channel_order = CL_INTENSITY;
    png_format.image_channel_data_type = CL_UNORM_INT16;
    input_image = clCreateImage2D(context, 
          CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, 
@@ -129,13 +148,23 @@ int main(int argc, char **argv) {
    output_image = clCreateImage2D(context, 
          CL_MEM_WRITE_ONLY, &png_format, width, height, 0, NULL, &err);
    if(err < 0) {
+      printf("%d",err);
       perror("Couldn't create the image object");
       exit(1);
    }; 
 
+   /* Create a write-only buffer to hold the output data */
+   test_buffer = clCreateBuffer(context, CL_MEM_WRITE_ONLY, 
+         sizeof(test), NULL, &err);
+   if(err < 0) {
+      perror("Couldn't create a buffer");
+      exit(1);   
+   };
+
    /* Create kernel arguments */
    err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &input_image);
    err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &output_image);
+   err |= clSetKernelArg(kernel, 2, sizeof(cl_mem), &test_buffer);
    if(err < 0) {
       printf("Couldn't set a kernel argument");
       exit(1);   
@@ -168,11 +197,31 @@ int main(int argc, char **argv) {
       exit(1);   
    }
 
+   /* Read and print the result */
+   err = clEnqueueReadBuffer(queue, test_buffer, CL_TRUE, 0, 
+      sizeof(test), &test, 0, NULL, NULL);
+   if(err < 0) {
+      perror("Couldn't read the buffer");
+      exit(1);   
+   }
+
+   for(int i=0; i<16; i+=4) {
+      printf("%.2f     %.2f     %.2f     %.2f\n", 
+         test[i], test[i+1], test[i+2], test[i+3]);
+   }
+
+   for(int i=0; i<16; i+=4) {
+      printf("%d     %d     %d     %d\n", 
+         pixels[i], pixels[i+1], pixels[i+2], pixels[i+3]);
+   }
+
+
    /* Create output PNG file and write data */
    write_image_data(OUTPUT_FILE, pixels, width, height);
 
    /* Deallocate resources */
    free(pixels);
+   clReleaseMemObject(test_buffer);
    clReleaseMemObject(input_image);
    clReleaseMemObject(output_image);
    clReleaseKernel(kernel);
