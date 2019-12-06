@@ -1,14 +1,12 @@
 #define _CRT_SECURE_NO_WARNINGS
-#define PROGRAM_FILE "./apps/Ch6/interp.cl"
-#define KERNEL_FUNC "interp"
-
-#define SCALE_FACTOR 3
+#define PROGRAM_FILE "./apps/Ch11/simple_image.cl"
+#define KERNEL_FUNC "simple_image"
 
 #define PNG_DEBUG 3
 #include <png.h>
 
-#define INPUT_FILE "./apps/Ch6/interp_input.png"
-#define OUTPUT_FILE "./apps/Ch6/interp_output.png"
+#define INPUT_FILE "./apps/Ch11/blank.png"
+#define OUTPUT_FILE "./apps/Ch11/output.png"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -55,7 +53,6 @@ cl_program build_program(cl_context ctx, cl_device_id dev, const char* filename)
    char *program_buffer, *program_log;
    size_t program_size, log_size;
    int err;
-   char arg[20];
 
    /* Read program file and place content into buffer */
    program_handle = fopen(filename, "r");
@@ -80,11 +77,8 @@ cl_program build_program(cl_context ctx, cl_device_id dev, const char* filename)
    }
    free(program_buffer);
 
-   /* Create build argument */
-   sprintf(arg, "-DSCALE=%u", SCALE_FACTOR);
-
    /* Build program */
-   err = clBuildProgram(program, 0, NULL, arg, NULL, NULL);
+   err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
    if(err < 0) {
 
       /* Find size of log and print to std output */
@@ -102,7 +96,7 @@ cl_program build_program(cl_context ctx, cl_device_id dev, const char* filename)
    return program;
 }
 
-void read_image_data(const char* filename, png_bytep* input, png_bytep* output, size_t* w, size_t* h) {
+void read_image_data(const char* filename, png_bytep* data, size_t* w, size_t* h) {
 
    int i;
 
@@ -121,11 +115,10 @@ void read_image_data(const char* filename, png_bytep* input, png_bytep* output, 
    *w = png_get_image_width(png_ptr, info_ptr);
    *h = png_get_image_height(png_ptr, info_ptr);
 
-   /* Allocate input/output memory and initialize data */
-   *input = malloc(*h * png_get_rowbytes(png_ptr, info_ptr));
-   *output = malloc(*h * png_get_rowbytes(png_ptr, info_ptr) * SCALE_FACTOR  * SCALE_FACTOR );
+   /* Allocate memory and read image data */
+   *data = malloc(*h * png_get_rowbytes(png_ptr, info_ptr));
    for(i=0; i<*h; i++) {
-      png_read_row(png_ptr, *input + i * png_get_rowbytes(png_ptr, info_ptr), NULL);
+      png_read_row(png_ptr, *data + i * png_get_rowbytes(png_ptr, info_ptr), NULL);
    }
 
    /* Close input file */
@@ -154,7 +147,7 @@ void write_image_data(const char* filename, png_bytep data, size_t w, size_t h) 
          PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
    png_write_info(png_ptr, info_ptr);
    for(i=0; i<h; i++) {
-      png_write_row(png_ptr, data + i * png_get_rowbytes(png_ptr, info_ptr));
+      png_write_row(png_ptr, data + i*png_get_rowbytes(png_ptr, info_ptr));
    }
 
    /* Close file */
@@ -175,14 +168,14 @@ int main(int argc, char **argv) {
    size_t global_size[2];
 
    /* Image data */
-   png_bytep input_pixels, output_pixels;
+   png_bytep pixels;
    cl_image_format png_format;
    cl_mem input_image, output_image;
-   size_t width, height;
    size_t origin[3], region[3];
+   size_t width, height;
 
    /* Open input file and read image data */
-   read_image_data(INPUT_FILE, &input_pixels, &output_pixels, &width, &height);
+   read_image_data(INPUT_FILE, &pixels, &width, &height);
 
    /* Create a device and context */
    device = create_device();
@@ -192,7 +185,7 @@ int main(int argc, char **argv) {
       exit(1);
    }
 
-   /* Create kernel */
+   /* Build the program and create a kernel */
    program = build_program(context, device, PROGRAM_FILE);
    kernel = clCreateKernel(program, KERNEL_FUNC, &err);
    if(err < 0) {
@@ -200,31 +193,18 @@ int main(int argc, char **argv) {
       exit(1);
    };
 
-   /* Create input image object */
+   /* Create image object */
    png_format.image_channel_order = CL_LUMINANCE;
    png_format.image_channel_data_type = CL_UNORM_INT16;
    input_image = clCreateImage2D(context, 
          CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, 
-         &png_format, width, height, 0, (void*)input_pixels, &err);
-   if(err < 0) {
-      perror("Couldn't create the image object");
-      exit(1);
-   }; 
-
-   /* Create output image object */
+         &png_format, width, height, 0, (void*)pixels, &err);
    output_image = clCreateImage2D(context, 
-         CL_MEM_WRITE_ONLY, &png_format, SCALE_FACTOR * width, 
-         SCALE_FACTOR * height, 0, NULL, &err);
+         CL_MEM_WRITE_ONLY, &png_format, width, height, 0, NULL, &err);
    if(err < 0) {
       perror("Couldn't create the image object");
       exit(1);
    }; 
-
-   /* Create buffer */
-   if(err < 0) {
-      perror("Couldn't create a buffer");
-      exit(1);
-   };
 
    /* Create kernel arguments */
    err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &input_image);
@@ -235,14 +215,14 @@ int main(int argc, char **argv) {
    }; 
 
    /* Create a command queue */
-   queue = clCreateCommandQueueWithProperties(context, device, 0, &err);
+   queue = clCreateCommandQueue(context, device, 0, &err);
    if(err < 0) {
       perror("Couldn't create a command queue");
       exit(1);   
    };
 
    /* Enqueue kernel */
-   global_size[0] = width; global_size[1] = height;
+   global_size[0] = height; global_size[1] = width;
    err = clEnqueueNDRangeKernel(queue, kernel, 2, NULL, global_size, 
          NULL, 0, NULL, NULL);  
    if(err < 0) {
@@ -252,20 +232,19 @@ int main(int argc, char **argv) {
 
    /* Read the image object */
    origin[0] = 0; origin[1] = 0; origin[2] = 0;
-   region[0] = SCALE_FACTOR * width; region[1] = SCALE_FACTOR * height; region[2] = 1;
+   region[0] = width; region[1] = height; region[2] = 1;
    err = clEnqueueReadImage(queue, output_image, CL_TRUE, origin, 
-         region, 0, 0, (void*)output_pixels, 0, NULL, NULL);
+         region, 0, 0, (void*)pixels, 0, NULL, NULL);
    if(err < 0) {
       perror("Couldn't read from the image object");
       exit(1);   
    }
 
    /* Create output PNG file and write data */
-   write_image_data(OUTPUT_FILE, output_pixels, SCALE_FACTOR * width, SCALE_FACTOR * height);
+   write_image_data(OUTPUT_FILE, pixels, width, height);
 
    /* Deallocate resources */
-   free(input_pixels);
-   free(output_pixels);
+   free(pixels);
    clReleaseMemObject(input_image);
    clReleaseMemObject(output_image);
    clReleaseKernel(kernel);

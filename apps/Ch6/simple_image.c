@@ -22,8 +22,6 @@
 
 void read_image_data(const char* filename, png_bytep* data, size_t* w, size_t* h) {
 
-   int i;
-
    /* Open input file */
    FILE *png_input;
    if((png_input = fopen(filename, "rb")) == NULL) {
@@ -43,22 +41,27 @@ void read_image_data(const char* filename, png_bytep* data, size_t* w, size_t* h
    png_byte channels = png_get_channels(png_ptr, info_ptr);
    png_byte color_type = png_get_color_type(png_ptr, info_ptr);
    png_byte bit_depth = png_get_bit_depth(png_ptr, info_ptr);
+   png_byte filter_type = png_get_filter_type(png_ptr, info_ptr);
    printf("Input image row size = %ld bytes\n",sz);
    printf("Input image channels = %d \n",channels);
    printf("Input image color type = %d \n",color_type);
-   printf("Input image bit depth = %d bits\n",(uint16_t)(bit_depth));
+   printf("Input image bit depth = %d bits\n",(uint8_t)(bit_depth));
+   printf("Input image filter type = %d\n",(uint16_t)(filter_type));
 
    /* Allocate memory and read image data */
    *data = malloc(*h * png_get_rowbytes(png_ptr, info_ptr));   
-   for(i=0; i<*h; i++) {
-      png_read_row(png_ptr, *data + i * sz, NULL);
+   for(int ii=0; ii<*h; ii++) {
+      png_read_row(png_ptr, *data + ii * sz, NULL);
    }
 
-   png_bytepp row_pointers = png_get_rows(png_ptr, info_ptr);
-   for(int j=0; j<*h; j++){
-      printf("%hhn .. ",*(row_pointers[j]));
+   // Print values of pixels in input image 
+   printf("Input image:\n");
+   for(int ii=0; ii<*h; ii++){
+      for(int jj=0; jj<*w; jj++){
+         printf("%d ",(*data)[*w*ii + jj]);
+      }
+      printf("\n");
    }
-   printf("\n");
 
    /* Close input file */
    png_read_end(png_ptr, info_ptr);
@@ -67,8 +70,6 @@ void read_image_data(const char* filename, png_bytep* data, size_t* w, size_t* h
 }
 
 void write_image_data(const char* filename, png_bytep data, size_t w, size_t h) {
-
-   int i;
 
    /* Open output file */
    FILE *png_output;
@@ -83,10 +84,36 @@ void write_image_data(const char* filename, png_bytep data, size_t w, size_t h) 
    png_init_io(png_ptr, png_output);
    png_set_IHDR(png_ptr, info_ptr, w, h, 16,
          PNG_COLOR_TYPE_GRAY, PNG_INTERLACE_NONE,
-         PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+         PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
    png_write_info(png_ptr, info_ptr);
-   for(i=0; i<h; i++) {
-      png_write_row(png_ptr, data + i*png_get_rowbytes(png_ptr, info_ptr));
+
+   png_size_t sz = png_get_rowbytes(png_ptr, info_ptr);
+   png_byte channels = png_get_channels(png_ptr, info_ptr);
+   png_byte color_type = png_get_color_type(png_ptr, info_ptr);
+   png_byte bit_depth = png_get_bit_depth(png_ptr, info_ptr);
+   png_byte filter_type = png_get_filter_type(png_ptr, info_ptr);
+   printf("Output image row size = %ld bytes\n",sz);
+   printf("Output image channels = %d \n",channels);
+   printf("Output image color type = %d \n",color_type);
+   printf("Output image bit depth = %d bits\n",(uint8_t)(bit_depth));
+   printf("Output image filter type = %d\n",(uint8_t)(filter_type));
+
+   for(int ii=0; ii<h; ii++) {
+      png_write_row(png_ptr, data + ii*sz);
+   }
+
+   // Print values of pixels in input image 
+   // printf("Output image:\n");
+   // for(int ii=0; ii<h; ii++){
+   //    for(int jj=0; jj<w; jj++){
+   //       printf("%d ",(data)[w*ii + jj]);
+   //    }
+   //    printf("\n");
+   // }
+   printf("Output image:\n");
+   for(int i=0; i<32; i+=8) {
+      printf("0x%X  %X     0x%X  %X     0x%X  %X     0x%X  %X \n", 
+         data[i], data[i+1], data[i+2], data[i+3], data[i+4], data[i+5], data[i+6], data[i+7]);
    }
 
    /* Close file */
@@ -106,7 +133,6 @@ int main(int argc, char **argv) {
    const char options[] = "-cl-no-signed-zeros";  
    cl_kernel kernel;
    cl_int err;
-   size_t global_size[2];
 
    /* Image data */
    png_bytep pixels;
@@ -140,18 +166,23 @@ int main(int argc, char **argv) {
    };
 
    /* Create image object */
-   png_format.image_channel_order = CL_INTENSITY;
-   png_format.image_channel_data_type = CL_UNORM_INT16;
+   png_format.image_channel_order = CL_LUMINANCE;
+   png_format.image_channel_data_type = CL_HALF_FLOAT;
    input_image = clCreateImage2D(context, 
          CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, 
          &png_format, width, height, 0, (void*)pixels, &err);
    output_image = clCreateImage2D(context, 
          CL_MEM_WRITE_ONLY, &png_format, width, height, 0, NULL, &err);
    if(err < 0) {
-      printf("%d",err);
+      printf("%d\n",err);
       perror("Couldn't create the image object");
       exit(1);
    }; 
+
+   size_t element_size;
+   clGetImageInfo (input_image, CL_IMAGE_ELEMENT_SIZE,
+      sizeof(size_t), &element_size, NULL);
+   printf("Element size = %ld bytes\n", element_size);
 
    /* Create a write-only buffer to hold the output data */
    test_buffer = clCreateBuffer(context, CL_MEM_WRITE_ONLY, 
@@ -178,10 +209,12 @@ int main(int argc, char **argv) {
    };
 
    /* Enqueue kernel */
-   global_size[0] = height; 
-   global_size[1] = width;
-   err = clEnqueueNDRangeKernel(queue, kernel, 2, NULL, global_size, 
-         NULL, 0, NULL, NULL);  
+   size_t dim = 2;
+   size_t global_size[] = {width, height};
+   size_t* global_offset = NULL;
+   size_t* local_size = NULL;
+   err = clEnqueueNDRangeKernel(queue, kernel, dim, global_offset,
+         global_size, local_size, 0, NULL, NULL);      
    if(err < 0) {
       perror("Couldn't enqueue the kernel");
       exit(1);
@@ -205,16 +238,17 @@ int main(int argc, char **argv) {
       exit(1);   
    }
 
+   printf("Test buffer output:\n");
    for(int i=0; i<16; i+=4) {
       printf("%.2f     %.2f     %.2f     %.2f\n", 
          test[i], test[i+1], test[i+2], test[i+3]);
    }
 
-   for(int i=0; i<16; i+=4) {
-      printf("%d     %d     %d     %d\n", 
-         pixels[i], pixels[i+1], pixels[i+2], pixels[i+3]);
+   printf("Output image:\n");
+   for(int i=0; i<32; i+=8) {
+      printf("0x%X  %X     0x%X  %X     0x%X  %X     0x%X  %X \n", 
+         pixels[i], pixels[i+1], pixels[i+2], pixels[i+3], pixels[i+4], pixels[i+5], pixels[i+6], pixels[i+7]);
    }
-
 
    /* Create output PNG file and write data */
    write_image_data(OUTPUT_FILE, pixels, width, height);
