@@ -90,6 +90,9 @@ find_package(PNG REQUIRED)
 add_executable(interp ./Ch6/interp.c)
 target_link_libraries(interp PRIVATE OpenCL::OpenCL)
 target_link_libraries(interp PRIVATE PNG::PNG)
+target_link_libraries(interp PRIVATE util)
+target_include_directories(interp PRIVATE ../libs/util/)
+
 
 # # Ch6.1_1 (simple_image)
 # add_executable(simple_image1 ./Ch11/simple_image.c)

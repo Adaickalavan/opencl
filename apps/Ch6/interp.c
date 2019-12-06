@@ -1,4 +1,5 @@
 #define _CRT_SECURE_NO_WARNINGS
+#define NUM_FILES 1
 #define PROGRAM_FILE "./apps/Ch6/interp.cl"
 #define KERNEL_FUNC "interp"
 
@@ -13,94 +14,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "util.h"
 
 #ifdef MAC
 #include <OpenCL/cl.h>
 #else
 #include <CL/cl.h>
 #endif
-
-/* Find a GPU or CPU associated with the first available platform */
-cl_device_id create_device() {
-
-   cl_platform_id platform;
-   cl_device_id dev;
-   int err;
-
-   /* Identify a platform */
-   err = clGetPlatformIDs(1, &platform, NULL);
-   if(err < 0) {
-      perror("Couldn't identify a platform");
-      exit(1);
-   } 
-
-   /* Access a device */
-   err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &dev, NULL);
-   if(err == CL_DEVICE_NOT_FOUND) {
-      err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_CPU, 1, &dev, NULL);
-   }
-   if(err < 0) {
-      perror("Couldn't access any devices");
-      exit(1);   
-   }
-
-   return dev;
-}
-
-/* Create program from a file and compile it */
-cl_program build_program(cl_context ctx, cl_device_id dev, const char* filename) {
-
-   cl_program program;
-   FILE *program_handle;
-   char *program_buffer, *program_log;
-   size_t program_size, log_size;
-   int err;
-   char arg[20];
-
-   /* Read program file and place content into buffer */
-   program_handle = fopen(filename, "r");
-   if(program_handle == NULL) {
-      perror("Couldn't find the program file");
-      exit(1);
-   }
-   fseek(program_handle, 0, SEEK_END);
-   program_size = ftell(program_handle);
-   rewind(program_handle);
-   program_buffer = (char*)malloc(program_size + 1);
-   program_buffer[program_size] = '\0';
-   fread(program_buffer, sizeof(char), program_size, program_handle);
-   fclose(program_handle);
-
-   /* Create program from file */
-   program = clCreateProgramWithSource(ctx, 1, 
-      (const char**)&program_buffer, &program_size, &err);
-   if(err < 0) {
-      perror("Couldn't create the program");
-      exit(1);
-   }
-   free(program_buffer);
-
-   /* Create build argument */
-   sprintf(arg, "-DSCALE=%u", SCALE_FACTOR);
-
-   /* Build program */
-   err = clBuildProgram(program, 0, NULL, arg, NULL, NULL);
-   if(err < 0) {
-
-      /* Find size of log and print to std output */
-      clGetProgramBuildInfo(program, dev, CL_PROGRAM_BUILD_LOG, 
-            0, NULL, &log_size);
-      program_log = (char*) malloc(log_size + 1);
-      program_log[log_size] = '\0';
-      clGetProgramBuildInfo(program, dev, CL_PROGRAM_BUILD_LOG, 
-            log_size + 1, program_log, NULL);
-      printf("%s\n", program_log);
-      free(program_log);
-      exit(1);
-   }
-
-   return program;
-}
 
 void read_image_data(const char* filename, png_bytep* input, png_bytep* output, size_t* w, size_t* h) {
 
@@ -122,8 +42,8 @@ void read_image_data(const char* filename, png_bytep* input, png_bytep* output, 
    *h = png_get_image_height(png_ptr, info_ptr);
 
    /* Allocate input/output memory and initialize data */
-   *input = malloc(*h * png_get_rowbytes(png_ptr, info_ptr));
-   *output = malloc(*h * png_get_rowbytes(png_ptr, info_ptr) * SCALE_FACTOR  * SCALE_FACTOR );
+   *input = (png_bytep)malloc(*h * png_get_rowbytes(png_ptr, info_ptr));
+   *output = (png_bytep)malloc(*h * png_get_rowbytes(png_ptr, info_ptr) * SCALE_FACTOR  * SCALE_FACTOR );
    for(i=0; i<*h; i++) {
       png_read_row(png_ptr, *input + i * png_get_rowbytes(png_ptr, info_ptr), NULL);
    }
@@ -135,8 +55,6 @@ void read_image_data(const char* filename, png_bytep* input, png_bytep* output, 
 }
 
 void write_image_data(const char* filename, png_bytep data, size_t w, size_t h) {
-
-   int i;
 
    /* Open output file */
    FILE *png_output;
@@ -153,7 +71,7 @@ void write_image_data(const char* filename, png_bytep data, size_t w, size_t h) 
          PNG_COLOR_TYPE_GRAY, PNG_INTERLACE_NONE,
          PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
    png_write_info(png_ptr, info_ptr);
-   for(i=0; i<h; i++) {
+   for(int i=0; i<h; i++) {
       png_write_row(png_ptr, data + i * png_get_rowbytes(png_ptr, info_ptr));
    }
 
@@ -172,14 +90,12 @@ int main(int argc, char **argv) {
    cl_program program;
    cl_kernel kernel;
    cl_int err;
-   size_t global_size[2];
 
    /* Image data */
    png_bytep input_pixels, output_pixels;
    cl_image_format png_format;
    cl_mem input_image, output_image;
    size_t width, height;
-   size_t origin[3], region[3];
 
    /* Open input file and read image data */
    read_image_data(INPUT_FILE, &input_pixels, &output_pixels, &width, &height);
@@ -193,7 +109,12 @@ int main(int argc, char **argv) {
    }
 
    /* Create kernel */
-   program = build_program(context, device, PROGRAM_FILE);
+   // program = build_program(context, device, PROGRAM_FILE);
+   char options[20];
+   sprintf(options, "-D SCALE=%u", SCALE_FACTOR);     
+   const char* fileNames[] = {PROGRAM_FILE};
+   program = createProgramFromFile(NUM_FILES, fileNames, context, device, options);
+ 
    kernel = clCreateKernel(program, KERNEL_FUNC, &err);
    if(err < 0) {
       printf("Couldn't create a kernel: %d", err);
@@ -242,7 +163,7 @@ int main(int argc, char **argv) {
    };
 
    /* Enqueue kernel */
-   global_size[0] = width; global_size[1] = height;
+   size_t global_size[] = {width, height};
    err = clEnqueueNDRangeKernel(queue, kernel, 2, NULL, global_size, 
          NULL, 0, NULL, NULL);  
    if(err < 0) {
@@ -251,8 +172,11 @@ int main(int argc, char **argv) {
    }
 
    /* Read the image object */
-   origin[0] = 0; origin[1] = 0; origin[2] = 0;
-   region[0] = SCALE_FACTOR * width; region[1] = SCALE_FACTOR * height; region[2] = 1;
+   size_t origin[3] = { 0, 0, 0};
+   size_t region[3] = {
+      SCALE_FACTOR * width,
+      SCALE_FACTOR * height, 
+      1};
    err = clEnqueueReadImage(queue, output_image, CL_TRUE, origin, 
          region, 0, 0, (void*)output_pixels, 0, NULL, NULL);
    if(err < 0) {
