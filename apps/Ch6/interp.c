@@ -24,8 +24,6 @@
 
 void read_image_data(const char* filename, png_bytep* input, png_bytep* output, size_t* w, size_t* h) {
 
-   int i;
-
    /* Open input file */
    FILE *png_input;
    if((png_input = fopen(filename, "rb")) == NULL) {
@@ -44,7 +42,7 @@ void read_image_data(const char* filename, png_bytep* input, png_bytep* output, 
    /* Allocate input/output memory and initialize data */
    *input = (png_bytep)malloc(*h * png_get_rowbytes(png_ptr, info_ptr));
    *output = (png_bytep)malloc(*h * png_get_rowbytes(png_ptr, info_ptr) * SCALE_FACTOR  * SCALE_FACTOR );
-   for(i=0; i<*h; i++) {
+   for(int i=0; i<*h; i++) {
       png_read_row(png_ptr, *input + i * png_get_rowbytes(png_ptr, info_ptr), NULL);
    }
 
