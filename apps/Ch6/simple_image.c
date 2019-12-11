@@ -171,8 +171,20 @@ int main(int argc, char **argv) {
    input_image = clCreateImage2D(context, 
          CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, 
          &png_format, width, height, 0, (void*)pixels, &err);
-   output_image = clCreateImage2D(context, 
-         CL_MEM_WRITE_ONLY, &png_format, width, height, 0, NULL, &err);
+   
+   // output_image = clCreateImage2D(context, 
+   //    CL_MEM_WRITE_ONLY, &png_format, width, height, 0, NULL, &err);
+   cl_image_desc image_desc_output;
+   image_desc_output.image_type = CL_MEM_OBJECT_IMAGE2D;
+   image_desc_output.image_width = width;
+   image_desc_output.image_height = height;
+   image_desc_output.image_row_pitch = 0;
+   output_image = clCreateImage(context, 
+         CL_MEM_WRITE_ONLY, 
+         &png_format, 
+         &image_desc_output,
+         NULL, 
+         &err);      
    if(err < 0) {
       printf("%d\n",err);
       perror("Couldn't create the image object");

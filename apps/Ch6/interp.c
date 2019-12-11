@@ -106,6 +106,19 @@ int main(int argc, char **argv) {
       exit(1);
    }
 
+
+   /* Obtain the device data */
+   cl_bool support;
+   clGetDeviceInfo(device, CL_DEVICE_IMAGE_SUPPORT, 
+      sizeof(support), &support, NULL);
+   if (CL_TRUE == support){
+      printf("CL device image support: %d\n", support);
+   } 
+   else {
+      printf("This OpenCL device does not support images."); 
+      exit(1);
+   }
+ 
    /* Create kernel */
    // program = build_program(context, device, PROGRAM_FILE);
    char options[20];
@@ -122,32 +135,68 @@ int main(int argc, char **argv) {
    /* Create input image object */
    png_format.image_channel_order = CL_LUMINANCE;
    png_format.image_channel_data_type = CL_UNORM_INT16;
-   input_image = clCreateImage2D(context, 
+   // input_image = clCreateImage2D(context, 
+   //       CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, 
+   //       &png_format, width, height, 0, (void*)input_pixels, &err);
+   cl_image_desc image_desc_input;
+   image_desc_input.image_type = CL_MEM_OBJECT_IMAGE2D;
+   image_desc_input.image_width = 44;
+   image_desc_input.image_height = 16;
+   image_desc_input.image_depth = 1;
+   image_desc_input.image_array_size = 1;
+   image_desc_input.image_row_pitch = 0;
+   image_desc_input.image_slice_pitch = 0;
+   image_desc_input.num_mip_levels = 0;
+   image_desc_input.num_samples = 0;
+   image_desc_input.buffer= NULL;
+   input_image = clCreateImage(context, 
          CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, 
-         &png_format, width, height, 0, (void*)input_pixels, &err);
+         &png_format, 
+         &image_desc_input,
+         (void*)input_pixels, 
+         &err);      
    if(err < 0) {
-      perror("Couldn't create the image object");
+      perror("Couldn't create the image object 1");
       exit(1);
    }; 
 
    /* Create output image object */
-   output_image = clCreateImage2D(context, 
-         CL_MEM_WRITE_ONLY, &png_format, SCALE_FACTOR * width, 
-         SCALE_FACTOR * height, 0, NULL, &err);
+   // output_image = clCreateImage2D(context, 
+   //       CL_MEM_WRITE_ONLY, &png_format, SCALE_FACTOR * width, 
+   //       SCALE_FACTOR * height, 0, NULL, &err);
+   /* Create output image object */
+   cl_image_desc image_desc_output;
+   image_desc_output.image_type = CL_MEM_OBJECT_IMAGE2D;
+   image_desc_output.image_width = 132;
+   image_desc_output.image_height = 48;
+   image_desc_output.image_row_pitch = 0;
+   output_image = clCreateImage(context, 
+         CL_MEM_WRITE_ONLY, 
+         &png_format, 
+         &image_desc_output,
+         NULL, 
+         &err);      
    if(err < 0) {
-      perror("Couldn't create the image object");
+
+      perror("Couldn't create the image object 2");
       exit(1);
    }; 
 
-   /* Create buffer */
+   /* Data and buffers */
+   float* test = (float*)malloc(SCALE_FACTOR * width * SCALE_FACTOR * height * sizeof(float));
+   cl_mem test_buffer;
+   /* Create a write-only buffer to hold the output data */
+   test_buffer = clCreateBuffer(context, CL_MEM_WRITE_ONLY, 
+         SCALE_FACTOR * width * SCALE_FACTOR * height * sizeof(float), NULL, &err);
    if(err < 0) {
       perror("Couldn't create a buffer");
-      exit(1);
+      exit(1);   
    };
 
    /* Create kernel arguments */
    err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &input_image);
    err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &output_image);
+   err |= clSetKernelArg(kernel, 2, sizeof(cl_mem), &test_buffer);
    if(err < 0) {
       printf("Couldn't set a kernel argument");
       exit(1);   
@@ -161,8 +210,9 @@ int main(int argc, char **argv) {
    };
 
    /* Enqueue kernel */
+   cl_uint dim = 2;
    size_t global_size[] = {width, height};
-   err = clEnqueueNDRangeKernel(queue, kernel, 2, NULL, global_size, 
+   err = clEnqueueNDRangeKernel(queue, kernel, dim, NULL, global_size, 
          NULL, 0, NULL, NULL);  
    if(err < 0) {
       perror("Couldn't enqueue the kernel");
@@ -170,11 +220,8 @@ int main(int argc, char **argv) {
    }
 
    /* Read the image object */
-   size_t origin[3] = { 0, 0, 0};
-   size_t region[3] = {
-      SCALE_FACTOR * width,
-      SCALE_FACTOR * height, 
-      1};
+   size_t origin[3] = {0, 0, 0};
+   size_t region[3] = {SCALE_FACTOR * width, SCALE_FACTOR * height, 1};
    err = clEnqueueReadImage(queue, output_image, CL_TRUE, origin, 
          region, 0, 0, (void*)output_pixels, 0, NULL, NULL);
    if(err < 0) {
@@ -182,10 +229,30 @@ int main(int argc, char **argv) {
       exit(1);   
    }
 
+   /* Read and print the result */
+   err = clEnqueueReadBuffer(queue, test_buffer, CL_TRUE, 0, 
+      SCALE_FACTOR * width * SCALE_FACTOR * height * sizeof(float), test, 0, NULL, NULL);
+   if(err < 0) {
+      perror("Couldn't read the buffer");
+      exit(1);   
+   }
+
+   // printf("%ld\n",SCALE_FACTOR * width);
+   // printf("%ld\n",SCALE_FACTOR * height);
+   // printf("Test buffer output:\n");
+   // for(int i=0; i<3; i++) {
+   //    printf("NEW ");
+   //    for(int j=0; j<132; j++){
+   //       printf("%.1f ", test[i*132 + j]);
+   //    }
+   //    printf("\n");
+   // }
+
    /* Create output PNG file and write data */
    write_image_data(OUTPUT_FILE, output_pixels, SCALE_FACTOR * width, SCALE_FACTOR * height);
 
    /* Deallocate resources */
+   // free(test);
    free(input_pixels);
    free(output_pixels);
    clReleaseMemObject(input_image);
