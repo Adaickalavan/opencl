@@ -1,11 +1,12 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define NUM_FILES 1
-#define PROGRAM_FILE "./apps/Ch7/callback.cl"
-#define KERNEL_FUNC "callback"
+#define PROGRAM_FILE "./apps/Ch7/user_event.cl"
+#define KERNEL_FUNC "user_event"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include "util.h"
 
 #ifdef MAC
@@ -14,28 +15,11 @@
 #include <CL/cl.h>
 #endif
 
-void CL_CALLBACK kernel_complete(cl_event e, cl_int status, void* data) {
-   printf("%s", (char*)data);
-}
-
 void CL_CALLBACK read_complete(cl_event e, cl_int status, void* data) {
 
-   int i;
-   cl_bool check;
-   float *buffer_data;
-
-   buffer_data = (float*)data;
-   check = CL_TRUE;
-   for(i=0; i<4096; i++) {
-      if(buffer_data[i] != 5.0) {
-         check = CL_FALSE;
-         break;
-      }  
-   }
-   if(check)
-      printf("The data has been initialized successfully.\n");
-   else
-      printf("The data has not been initialized successfully.\n");
+   float *float_data = (float*)data;
+   printf("New data: %4.2f, %4.2f, %4.2f, %4.2f\n", 
+      float_data[0], float_data[1], float_data[2], float_data[3]);
 }
 
 int main() {
@@ -45,17 +29,18 @@ int main() {
    cl_context context;
    cl_command_queue queue;
    cl_program program;
-   const char* fileNames[] = {PROGRAM_FILE};
-   const char options[] = "";     
    cl_kernel kernel;
-   cl_int err;
+   cl_int i, err;
 
    /* Data and events */
-   char* kernel_msg;
-   float data[4096];
+   float data[4];
    cl_mem data_buffer;
-   cl_event kernel_event, read_event;   
+   cl_event user_event, kernel_event, read_event;
    
+   /* Initialize data */
+   for(i=0; i<4; i++)
+      data[i] = i * 1.0;
+
    /* Create a device and context */
    device = create_device();
    context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
@@ -66,6 +51,8 @@ int main() {
 
    /* Build the program and create a kernel */
    // program = build_program(context, device, PROGRAM_FILE);
+   const char* fileNames[] = {PROGRAM_FILE};
+   const char options[] = "";  
    program = createProgramFromFile(NUM_FILES, fileNames, context, device, options);
    kernel = clCreateKernel(program, KERNEL_FUNC, &err);
    if(err < 0) {
@@ -73,9 +60,10 @@ int main() {
       exit(1);   
    };
 
-   /* Create a write-only buffer to hold the output data */
-   data_buffer = clCreateBuffer(context, CL_MEM_WRITE_ONLY, 
-         sizeof(data), NULL, &err);
+   /* Create a buffer to hold data */
+   data_buffer = clCreateBuffer(context, 
+         CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, 
+         sizeof(data), data, &err);
    if(err < 0) {
       perror("Couldn't create a buffer");
       exit(1);   
@@ -89,11 +77,19 @@ int main() {
    };
 
    /* Create a command queue */
-   queue = clCreateCommandQueueWithProperties(context, device, 0, &err);
+   queue = clCreateCommandQueueWithProperties(context, device, 
+         CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &err);
    if(err < 0) {
       perror("Couldn't create a command queue");
       exit(1);   
    };
+
+   /* Configure events */
+   user_event = clCreateUserEvent(context, &err);
+   if(err < 0) {
+      perror("Couldn't enqueue the kernel");
+      exit(1);   
+   }
 
    /* Enqueue kernel */
    size_t dim = 1;
@@ -101,47 +97,50 @@ int main() {
    size_t* global_offset = NULL;
    size_t* local_size = NULL;
    err = clEnqueueNDRangeKernel(queue, kernel, dim, global_offset,
-         &global_size, local_size, 0, NULL, &kernel_event);      
-   // err = clEnqueueTask(queue, kernel, 0, NULL, &kernel_event);
+         &global_size, local_size, 1, &user_event, &kernel_event);      
+   // err = clEnqueueTask(queue, kernel, 1, &user_event, &kernel_event);
    if(err < 0) {
       perror("Couldn't enqueue the kernel");
       exit(1);   
    }
 
    /* Read the buffer */
-   err = clEnqueueReadBuffer(queue, data_buffer, CL_FALSE, 0, 
-      sizeof(data), &data, 0, NULL, &read_event);
+   err = clEnqueueReadBuffer(queue, data_buffer, CL_TRUE, 0, 
+      sizeof(data), data, 1, &kernel_event, &read_event);
    if(err < 0) {
       perror("Couldn't read the buffer");
-      exit(1);   
+      exit(1);
    }
 
-   /* Set event handling routines */
-   kernel_msg = "The kernel finished successfully.\n\0";
-   err = clSetEventCallback(kernel_event, CL_COMPLETE, 
-         &kernel_complete, kernel_msg);
-   if(err < 0) {
-      perror("Couldn't set callback for kernel_event");
-      exit(1);   
-   }
-
+   /* Set callback for event */
    err = clSetEventCallback(read_event, CL_COMPLETE, 
          &read_complete, data);
    if(err < 0) {
-      perror("Couldn't set callback for read_event");
-      exit(1); 
+      perror("Couldn't set callback for event");
+      exit(1);   
    }
 
+   /* Sleep for a second to demonstrate the that commands haven't
+      started executing. Then prompt user */
+   sleep(1);
+   printf("Old data: %4.2f, %4.2f, %4.2f, %4.2f\n", 
+      data[0], data[1], data[2], data[3]);
+   printf("Press ENTER to continue.\n");
+   getchar();
+
+   /* Set user event to success */
+   clSetUserEventStatus(user_event, CL_SUCCESS);
+   
    clFinish(queue);
-   clReleaseEvent(read_event);
-   clReleaseEvent(kernel_event);
 
    /* Deallocate resources */
+   clReleaseEvent(read_event);
+   clReleaseEvent(kernel_event);
+   clReleaseEvent(user_event);
    clReleaseMemObject(data_buffer);
    clReleaseKernel(kernel);
    clReleaseCommandQueue(queue);
    clReleaseProgram(program);
    clReleaseContext(context);
-
    return 0;
 }
