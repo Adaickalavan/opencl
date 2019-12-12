@@ -79,14 +79,14 @@ find_package(PNG REQUIRED)
 # add_executable(select_test ./Ch5/select_test.c)
 # target_link_libraries(select_test PRIVATE OpenCL::OpenCL)
 
-# Ch6.1 (simple_image)
+# Ch6.1 (simple_image) -- have issues
 # add_executable(simple_image ./Ch6/simple_image.c)
 # target_link_libraries(simple_image PRIVATE OpenCL::OpenCL)
 # target_link_libraries(simple_image PRIVATE PNG::PNG)
 # target_link_libraries(simple_image PRIVATE util)
 # target_include_directories(simple_image PRIVATE ../libs/util/)
 
-# # Ch6.2 (interp)
+# # Ch6.2 (interp) -- have issues
 # add_executable(interp ./Ch6/interp.c)
 # target_link_libraries(interp PRIVATE OpenCL::OpenCL)
 # target_link_libraries(interp PRIVATE PNG::PNG)
