@@ -77,7 +77,10 @@ int main() {
    };
 
    /* Create a command queue */
-   queue = clCreateCommandQueueWithProperties(context, device, 
+   // NOTE: clCreateCommandQueueWithProperties got added in OpenCL 2.0. 
+   // Do not use it with platforms and devices that are less than version
+   // 2.0 (such as 1.1 and 1.2).
+   queue = clCreateCommandQueue(context, device, 
          CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &err);
    if(err < 0) {
       perror("Couldn't create a command queue");
@@ -105,7 +108,7 @@ int main() {
    }
 
    /* Read the buffer */
-   err = clEnqueueReadBuffer(queue, data_buffer, CL_TRUE, 0, 
+   err = clEnqueueReadBuffer(queue, data_buffer, CL_FALSE, 0, 
       sizeof(data), data, 1, &kernel_event, &read_event);
    if(err < 0) {
       perror("Couldn't read the buffer");
@@ -130,8 +133,6 @@ int main() {
 
    /* Set user event to success */
    clSetUserEventStatus(user_event, CL_SUCCESS);
-   
-   clFinish(queue);
 
    /* Deallocate resources */
    clReleaseEvent(read_event);
