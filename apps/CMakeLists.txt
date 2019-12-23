@@ -105,6 +105,12 @@ target_link_libraries(user_event PRIVATE OpenCL::OpenCL)
 target_link_libraries(user_event PRIVATE util)
 target_include_directories(user_event PRIVATE ../libs/util/)
 
+# Ch7.6 (profile_read)
+add_executable(profile_read ./Ch7/profile_read.c)
+target_link_libraries(profile_read PRIVATE OpenCL::OpenCL)
+target_link_libraries(profile_read PRIVATE util)
+target_include_directories(profile_read PRIVATE ../libs/util/)
+
 # # Ch6.1_1 (simple_image)
 # add_executable(simple_image1 ./Ch11/simple_image.c)
 # target_link_libraries(simple_image1 PRIVATE OpenCL::OpenCL)
