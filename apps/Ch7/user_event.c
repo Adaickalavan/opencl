@@ -78,8 +78,8 @@ int main() {
 
    /* Create a command queue */
    // NOTE: clCreateCommandQueueWithProperties got added in OpenCL 2.0. 
-   // Do not use it with platforms and devices that are less than version
-   // 2.0 (such as 1.1 and 1.2).
+   // Do not use it with platforms and devices that are less than 
+   // version 2.0 (such as 1.1 and 1.2).
    queue = clCreateCommandQueue(context, device, 
          CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &err);
    if(err < 0) {
