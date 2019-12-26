@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "util.h"
 
 #ifdef MAC
 #include <OpenCL/cl.h>
@@ -43,13 +44,16 @@ cl_device_id create_device(){
    clGetPlatformInfo(platform, CL_PLATFORM_VERSION, platform_size, platform_data, NULL);
    printf("Platform version: %s\n", platform_data);
 
-   // Access device name
+   // Access device properties
    err = clGetDeviceInfo(device, CL_DEVICE_NAME, 48 * sizeof(char), device_data, NULL);			
    if(err < 0) {		
       perror("Couldn't read device info");
       exit(1);
    }
    printf("Device name: %s\n", device_data);
+ 
+   size_t timer_res = getDeviceTimerResolution(device);
+   printf("Device timer resolution: %lu ns\n", timer_res);
 
    return device;
 }
@@ -114,4 +118,14 @@ cl_program createProgramFromFile(int numFiles, const char* fileNames[numFiles], 
    }
 
    return program;
+}
+
+// Get device's timer resolution
+size_t getDeviceTimerResolution(cl_device_id device){
+   size_t time_res;
+   
+   clGetDeviceInfo(device, CL_DEVICE_PROFILING_TIMER_RESOLUTION,
+   sizeof(time_res), &time_res, NULL);
+   
+   return time_res;
 }
