@@ -146,9 +146,9 @@ int main() {
    }
 
    #ifdef PROFILE_READ
-      printf("Average read time: %lu\n", total_time/NUM_ITERATIONS);
+      printf("Average read time: %lu ns\n", total_time/NUM_ITERATIONS);
    #else
-      printf("Average map time: %lu\n", total_time/NUM_ITERATIONS);
+      printf("Average map time: %lu ns\n", total_time/NUM_ITERATIONS);
    #endif
 
    // Test whether altering mapped memory affects buffer data on device

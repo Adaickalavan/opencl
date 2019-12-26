@@ -1,4 +1,5 @@
 #define _CRT_SECURE_NO_WARNINGS
+#define NUM_FILES 1
 #define PROGRAM_FILE "./apps/Ch7/profile_items.cl"
 #define KERNEL_FUNC "profile_items"
 
@@ -9,90 +10,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "util.h"
 
 #ifdef MAC
 #include <OpenCL/cl.h>
 #else
 #include <CL/cl.h>
 #endif
-
-/* Find a GPU or CPU associated with the first available platform */
-cl_device_id create_device() {
-
-   cl_platform_id platform;
-   cl_device_id dev;
-   int err;
-
-   /* Identify a platform */
-   err = clGetPlatformIDs(1, &platform, NULL);
-   if(err < 0) {
-      perror("Couldn't identify a platform");
-      exit(1);
-   } 
-
-   /* Access a device */
-   err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &dev, NULL);
-   if(err == CL_DEVICE_NOT_FOUND) {
-      err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_CPU, 1, &dev, NULL);
-   }
-   if(err < 0) {
-      perror("Couldn't access any devices");
-      exit(1);   
-   }
-
-   return dev;
-}
-
-/* Create program from a file and compile it */
-cl_program build_program(cl_context ctx, cl_device_id dev, const char* filename) {
-
-   cl_program program;
-   FILE *program_handle;
-   char *program_buffer, *program_log;
-   size_t program_size, log_size;
-   int err;
-
-   /* Read program file and place content into buffer */
-   program_handle = fopen(filename, "r");
-   if(program_handle == NULL) {
-      perror("Couldn't find the program file");
-      exit(1);
-   }
-   fseek(program_handle, 0, SEEK_END);
-   program_size = ftell(program_handle);
-   rewind(program_handle);
-   program_buffer = (char*)malloc(program_size + 1);
-   program_buffer[program_size] = '\0';
-   fread(program_buffer, sizeof(char), program_size, program_handle);
-   fclose(program_handle);
-
-   /* Create program from file */
-   program = clCreateProgramWithSource(ctx, 1, 
-      (const char**)&program_buffer, &program_size, &err);
-   if(err < 0) {
-      perror("Couldn't create the program");
-      exit(1);
-   }
-   free(program_buffer);
-
-   /* Build program */
-   err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
-   if(err < 0) {
-
-      /* Find size of log and print to std output */
-      clGetProgramBuildInfo(program, dev, CL_PROGRAM_BUILD_LOG, 
-            0, NULL, &log_size);
-      program_log = (char*) malloc(log_size + 1);
-      program_log[log_size] = '\0';
-      clGetProgramBuildInfo(program, dev, CL_PROGRAM_BUILD_LOG, 
-            log_size + 1, program_log, NULL);
-      printf("%s\n", program_log);
-      free(program_log);
-      exit(1);
-   }
-
-   return program;
-}
 
 int main() {
 
@@ -129,7 +53,10 @@ int main() {
    }     
 
    /* Build the program and create a kernel */
-   program = build_program(context, device, PROGRAM_FILE);
+   // program = build_program(context, device, PROGRAM_FILE);
+   const char* fileNames[] = {PROGRAM_FILE};
+   const char options[] = "";  
+   program = createProgramFromFile(NUM_FILES, fileNames, context, device, options);
    kernel = clCreateKernel(program, KERNEL_FUNC, &err);
    if(err < 0) {
       perror("Couldn't create a kernel");
@@ -162,11 +89,18 @@ int main() {
    };
 
    total_time = 0.0f;
+   size_t dim = 1;
+   size_t global_size = num_items;
+   size_t* global_offset = NULL;
+   // size_t local_size[] = {16};
+   size_t* local_size = NULL;
    for(i=0; i<NUM_ITERATIONS; i++) {
          
       /* Enqueue kernel */
-      clEnqueueNDRangeKernel(queue, kernel, 1, NULL, &num_items,
-            NULL, 0, NULL, &prof_event);
+      // clEnqueueNDRangeKernel(queue, kernel, 1, NULL, 
+      //    &num_items, NULL, 0, NULL, &prof_event);
+      err = clEnqueueNDRangeKernel(queue, kernel, dim, global_offset,
+         &global_size, local_size, 0, NULL, &prof_event);        
       if(err < 0) {
          perror("Couldn't enqueue the kernel");
          exit(1);   
@@ -180,7 +114,29 @@ int main() {
             sizeof(time_end), &time_end, NULL);
       total_time += time_end - time_start;
    }
-   printf("Average time = %lu\n", total_time/NUM_ITERATIONS);
+   printf("Average time = %lu ns\n", total_time/NUM_ITERATIONS);
+
+   /* Create memory map */
+   void* mapped_memory = clEnqueueMapBuffer(queue, data_buffer, CL_TRUE,
+         CL_MAP_READ, 0, sizeof(data), 0, NULL, NULL, &err);
+   if(err < 0) {
+      perror("Couldn't map the buffer to host memory");
+      exit(1);   
+   }
+   // Print contents of data
+   for(int j=0; j<2; j++){
+      for(int i=0; i<7; i++){
+         printf("%d ", ((int*)mapped_memory)[j*8 + i]);
+      }
+      printf("%d\n", ((int*)mapped_memory)[j*8 + 7]);
+   }
+   /* Unmap the buffer */
+   err = clEnqueueUnmapMemObject(queue, data_buffer, mapped_memory,
+         0, NULL, NULL);
+   if(err < 0) {
+      perror("Couldn't unmap the buffer");
+      exit(1);   
+   }
 
    /* Deallocate resources */
    clReleaseEvent(prof_event);

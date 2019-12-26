@@ -4,8 +4,12 @@ __kernel void profile_items(__global int4 *x, int num_ints) {
 
    x += get_global_id(0) * num_vectors;
    for(int i=0; i<num_vectors; i++) {
+      // x[i].s0 = x[i].s0;
+      // x[i].s1 = 1;
+      // x[i].s2 = 2;
+      // x[i].s3 = 3;
       x[i] += 1;
-      x[i] *= 2;
-      x[i] /= 3;
+      // x[i].s1 *= 2;
+      // x[i]. /= 3;
    }
 }
