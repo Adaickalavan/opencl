@@ -1,12 +1,12 @@
 #define _CRT_SECURE_NO_WARNINGS
-#define PROGRAM_FILE "./apps/Ch11/simple_image.cl"
+#define PROGRAM_FILE "./apps/Ch61/simple_image.cl"
 #define KERNEL_FUNC "simple_image"
 
 #define PNG_DEBUG 3
 #include <png.h>
 
-#define INPUT_FILE "./apps/Ch11/blank.png"
-#define OUTPUT_FILE "./apps/Ch11/output.png"
+#define INPUT_FILE "./apps/Ch61/blank.png"
+#define OUTPUT_FILE "./apps/Ch61/output.png"
 
 #include <stdio.h>
 #include <stdlib.h>
