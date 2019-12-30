@@ -73,9 +73,9 @@ int main() {
 
    /* Enqueue kernel */
    size_t dim = 1;
-   size_t global_size = 32;
+   size_t global_size = 4;
    size_t* global_offset = NULL;
-   size_t local_size = 32;
+   size_t local_size = 1;
    err = clEnqueueNDRangeKernel(queue, kernel, dim, global_offset,
          &global_size, &local_size, 0, NULL, NULL);   
    if(err < 0) {

@@ -8,13 +8,13 @@ __kernel void mutex(__global int *mutex, __global int *sum) {
    while(LOCK(mutex));
    *sum += 1;
    UNLOCK(mutex);
-   int waiting = 1;
 
-   // while(waiting) {
-   //    while(LOCK(mutex));
-   //    if(*sum == get_global_size(0)) {
-   //       waiting = 0;
-   //    }
-   //    UNLOCK(mutex);
-   // }
+   int waiting = 1;
+   while(waiting) {
+      while(LOCK(mutex));
+      if(*sum == get_global_size(0)) {
+         waiting = 0;
+      }
+      UNLOCK(mutex);
+   }
 }
