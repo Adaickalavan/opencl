@@ -1,12 +1,10 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define NUM_FILES 1
-#define PROGRAM_FILE "./apps/Ch7/atomic.cl"
-#define KERNEL_FUNC "atomic"
+#define PROGRAM_FILE "./apps/Ch7/mutex.cl"
+#define KERNEL_FUNC "mutex"
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 #include "util.h"
 
 #ifdef MAC
@@ -24,11 +22,10 @@ int main() {
    cl_program program;
    cl_kernel kernel;
    cl_int err;
-   size_t offset, global_size;
 
    /* Data and events */
-   int data[2];
-   cl_mem data_buffer;
+   int mutex = 0;
+   int sum = 0;
 
    /* Create a device and context */
    device = create_device();
@@ -50,15 +47,18 @@ int main() {
    };
 
    /* Create a buffer to hold data */
-   data_buffer = clCreateBuffer(context, CL_MEM_WRITE_ONLY, 
-      sizeof(data), NULL, &err);
+   cl_mem mutex_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, 
+      sizeof(mutex), &mutex, &err);
    if(err < 0) {
       perror("Couldn't create a buffer");
       exit(1);   
    };         
+   cl_mem sum_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, 
+      sizeof(sum), &sum, &err);
 
    /* Create kernel argument */
-   err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &data_buffer);
+   err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &mutex_buffer);
+   err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &sum_buffer);
    if(err < 0) {
       perror("Couldn't set a kernel argument");
       exit(1);   
@@ -72,28 +72,33 @@ int main() {
    };
 
    /* Enqueue kernel */
-   offset = 0;
-   global_size = 32;
+   size_t dim = 1;
+   size_t global_size = 32;
+   size_t* global_offset = NULL;
    size_t local_size = 32;
-   err = clEnqueueNDRangeKernel(queue, kernel, 1, &offset, &global_size, &local_size, 0, NULL, NULL);
+   err = clEnqueueNDRangeKernel(queue, kernel, dim, global_offset,
+         &global_size, &local_size, 0, NULL, NULL);   
    if(err < 0) {
       perror("Couldn't enqueue the kernel");
       exit(1);   
    }
 
    /* Read the buffer */
-   err = clEnqueueReadBuffer(queue, data_buffer, CL_TRUE, 0, 
-      sizeof(data), data, 0, NULL, NULL);
+   err = clEnqueueReadBuffer(queue, mutex_buffer, CL_TRUE, 0, 
+      sizeof(mutex), &mutex, 0, NULL, NULL);
+   err |= clEnqueueReadBuffer(queue, sum_buffer, CL_TRUE, 0, 
+      sizeof(sum), &sum, 0, NULL, NULL);
    if(err < 0) {
       perror("Couldn't read the buffer");
       exit(1);
    }
 
-   printf("Increment: %d\n", data[0]);
-   printf("Atomic increment: %d\n", data[1]);
+   printf("Mutex: %d\n", mutex);
+   printf("Sum: %d\n", sum);
 
    /* Deallocate resources */
-   clReleaseMemObject(data_buffer);
+   clReleaseMemObject(mutex_buffer);
+   clReleaseMemObject(sum_buffer);
    clReleaseKernel(kernel);
    clReleaseCommandQueue(queue);
    clReleaseProgram(program);
