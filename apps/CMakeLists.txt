@@ -1,5 +1,5 @@
 find_package(OpenCL REQUIRED) 
-find_package(PNG REQUIRED)
+# find_package(PNG REQUIRED)
 
 # # Ch1.1 (matvec)
 # add_executable(matvec ./Ch1/matvec.c)
@@ -79,12 +79,19 @@ find_package(PNG REQUIRED)
 # add_executable(select_test ./Ch5/select_test.c)
 # target_link_libraries(select_test PRIVATE OpenCL::OpenCL)
 
-# Ch6.1 (simple_image) -- have issues
+# # Ch6.1 (simple_image) -- have issues
 # add_executable(simple_image ./Ch6/simple_image.c)
 # target_link_libraries(simple_image PRIVATE OpenCL::OpenCL)
 # target_link_libraries(simple_image PRIVATE PNG::PNG)
 # target_link_libraries(simple_image PRIVATE util)
 # target_include_directories(simple_image PRIVATE ../libs/util/)
+
+# # Ch6.1_1 (simple_image) -- have issues
+# add_executable(simple_image1 ./Ch61/simple_image.c)
+# target_link_libraries(simple_image1 PRIVATE OpenCL::OpenCL)
+# target_link_libraries(simple_image1 PRIVATE PNG::PNG)
+# target_link_libraries(simple_image1 PRIVATE util)
+# target_include_directories(simple_image1 PRIVATE ../libs/util/)
 
 # # Ch6.2 (interp) -- have issues
 # add_executable(interp ./Ch6/interp.c)
@@ -123,15 +130,14 @@ find_package(PNG REQUIRED)
 # target_link_libraries(atomic PRIVATE util)
 # target_include_directories(atomic PRIVATE ../libs/util/)
 
-# Ch7.9 (mutex)
-add_executable(mutex ./Ch7/mutex.c)
-target_link_libraries(mutex PRIVATE OpenCL::OpenCL)
-target_link_libraries(mutex PRIVATE util)
-target_include_directories(mutex PRIVATE ../libs/util/)
+# # Ch7.9 (mutex)
+# add_executable(mutex ./Ch7/mutex.c)
+# target_link_libraries(mutex PRIVATE OpenCL::OpenCL)
+# target_link_libraries(mutex PRIVATE util)
+# target_include_directories(mutex PRIVATE ../libs/util/)
 
-# # Ch6.1_1 (simple_image)
-# add_executable(simple_image1 ./Ch61/simple_image.c)
-# target_link_libraries(simple_image1 PRIVATE OpenCL::OpenCL)
-# target_link_libraries(simple_image1 PRIVATE PNG::PNG)
-# target_link_libraries(simple_image1 PRIVATE util)
-# target_include_directories(simple_image1 PRIVATE ../libs/util/)
+# Ch8.1 (full_context)
+add_executable(full_context ./Ch8/full_context.cpp)
+target_link_libraries(full_context PRIVATE OpenCL::OpenCL)
+# target_link_libraries(full_context PRIVATE util)
+# target_include_directories(full_context PRIVATE ../libs/util/)
