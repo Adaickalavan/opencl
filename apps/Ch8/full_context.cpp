@@ -31,7 +31,7 @@ int main(void) {
          }
       }
 
-      // Create context with devices from first platform
+      // Create a context with devices from the first platform
       cl::Context context(devices[0]);
 
    }
