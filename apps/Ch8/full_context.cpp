@@ -1,7 +1,7 @@
 #define CL_HPP_ENABLE_EXCEPTIONS 
 #define CL_HPP_TARGET_OPENCL_VERSION 200
 
-#include <iostream>
+#include <stdio.h>
 
 #ifdef MAC
 #include <OpenCL/cl2.hpp>
@@ -10,27 +10,35 @@
 #endif
 
 int main(void) {
-   
-   std::vector<cl::Platform> platforms;
-   std::vector<cl::Device> platformDevices, ctxDevices;
-   cl::string device_name;
-   cl_uint i;
+
    try {
-      // Access all devices in first platform
+      // Retrieve all platforms
+      std::vector<cl::Platform> platforms;
       cl::Platform::get(&platforms);
-      platforms[0].getDevices(CL_DEVICE_TYPE_ALL, &platformDevices);
-      
-      // Create context and access device names
-      cl::Context context(platformDevices);
-      ctxDevices = context.getInfo<CL_CONTEXT_DEVICES>();
-      for(i=0; i<ctxDevices.size(); i++) {
-         device_name = ctxDevices[i].getInfo<CL_DEVICE_NAME>();
-         std::cout << "Device: " << device_name.c_str() << std::endl;
+
+      // Retrieve all devices in all platforms
+      cl::string platformParam;
+      cl::string deviceName;
+      std::vector<std::vector<cl::Device>> devices(platforms.size());
+      for(int i=0; i<platforms.size(); i++) {
+         platforms[i].getInfo(CL_PLATFORM_VERSION, &platformParam);
+         printf("Platform %d, Version: %s\n", i, platformParam.c_str());
+
+         platforms[i].getDevices(CL_DEVICE_TYPE_ALL, &devices[i]);
+         for(int j=0; j<devices[i].size(); j++) {
+            deviceName = devices[i][j].getInfo<CL_DEVICE_NAME>();
+            printf("Platform %d, Device %d: %s \n", i, j, deviceName.c_str());
+         }
       }
+
+      // Create context with devices from first platform
+      cl::Context context(devices[0]);
+
    }
    catch(cl::Error e) {
-      std::cout << e.what() << ": Error code " << e.err() << std::endl;
+      printf("%s : Error code %d\n", e.what(), e.err());
    }
 
    return 0;
 }
+
