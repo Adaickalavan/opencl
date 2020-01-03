@@ -1,7 +1,6 @@
 #define CL_HPP_ENABLE_EXCEPTIONS 
 #define CL_HPP_TARGET_OPENCL_VERSION 200
-// #define CL_HPP_MINIMUM_OPENCL_VERSION 120
-
+// #define CL_HPP_NO_STD_VECTOR
 
 #include <fstream>
 #include <iostream>
@@ -13,8 +12,6 @@
 #include <CL/cl2.hpp>
 #endif
 
-#define CL_HPP_NO_STD_VECTOR
-
 int main(void) {
    
    cl::vector<cl::Platform> platforms;
@@ -22,36 +19,36 @@ int main(void) {
    cl::vector<cl::Kernel> allKernels;
    std::string kernelName;
 
-   // try {
+   try {
       // Place the GPU devices of the first platform into a context
       cl::Platform::get(&platforms);
       platforms[0].getDevices(CL_DEVICE_TYPE_GPU, &devices);
       cl::Context context(devices);
       
       // Create and build program
-      std::ifstream programFile("./apps/Ch8/create_kernels.cl");
+      std::ifstream programFile("./apps/Ch8/kernels.cl");
       std::string programString(std::istreambuf_iterator<char>(programFile),
             (std::istreambuf_iterator<char>()));
-      cl::Program::Sources source(1, std::make_pair(programString.c_str(),
-            programString.length()+1));
-      cl::Program program(context, source);
-      program.build(devices);
+      // cl::Program::Sources source(1, std::make_pair(programString.c_str(),
+      //       programString.length()+1));
+      // cl::Program program(context, source);
+      // program.build(devices);
 
-   //    // Create individual kernels
-   //    cl::Kernel addKernel(program, "add");
-   //    cl::Kernel subKernel(program, "subtract");
-   //    cl::Kernel multKernel(program, "multiply");
+      // // Create individual kernels
+      // cl::Kernel addKernel(program, "add");
+      // cl::Kernel subKernel(program, "subtract");
+      // cl::Kernel multKernel(program, "multiply");
 
-   //    // Create all kernels in program
-   //    program.createKernels(&allKernels);
-   //    for(unsigned int i=0; i<allKernels.size(); i++) {
-   //       kernelName = allKernels[i].getInfo<CL_KERNEL_FUNCTION_NAME>();
-   //       std::cout << "Kernel: " << kernelName << std::endl;
-   //    }
-   // }
-   // catch(cl::Error e) {
-   //    std::cout << e.what() << ": Error code " << e.err() << std::endl;   
-   // }
+      // // Create all kernels in program
+      // program.createKernels(&allKernels);
+      // for(unsigned int i=0; i<allKernels.size(); i++) {
+      //    kernelName = allKernels[i].getInfo<CL_KERNEL_FUNCTION_NAME>();
+      //    std::cout << "Kernel: " << kernelName << std::endl;
+      // }
+   }
+   catch(cl::Error e) {
+      std::cout << e.what() << ": Error code " << e.err() << std::endl;   
+   }
 
    return 0;
 }
