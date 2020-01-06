@@ -31,8 +31,10 @@ int main(void) {
       std::string programString(std::istreambuf_iterator<char>(programFile),
             (std::istreambuf_iterator<char>()));
 
-      cl::Program::Sources source {std::make_pair(programString.c_str(),
-            programString.length()+1)};
+      cl::Program::Sources source(1, std::make_pair(programString.c_str(),
+            programString.length()+1));
+
+      // cl::Program::Sources source (1,{programString.c_str(),programString.length()+1});
 
       // cl::Program::Sources source;
       // source.push_back({programString.c_str(),programString.length()+1});      
