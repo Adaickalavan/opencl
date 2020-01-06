@@ -2,12 +2,21 @@
 #define CL_HPP_TARGET_OPENCL_VERSION 200
 
 #include <stdio.h>
+#include <exception>
 
 #ifdef MAC
-#include <OpenCL/cl2.hpp>
+   #include <OpenCL/cl2.hpp>
 #else
-#include <CL/cl2.hpp>
+   #include <CL/cl2.hpp>
 #endif
+
+class myexception : public std::exception {
+   public:
+      virtual const char* what() const throw()
+      {
+         return "No OpenCL 2.0 platform found.";
+      }
+} myex;
 
 int main(void) {
 
@@ -31,12 +40,27 @@ int main(void) {
          }
       }
 
+      // Set platform with OpenCL2, as the default platform.
+      cl::Platform plat;
+      for (auto &p : platforms) {
+        std::string platver = p.getInfo<CL_PLATFORM_VERSION>();
+        if (platver.find("OpenCL 2.") != std::string::npos) {
+            plat = p;
+        }
+      }
+      if (plat() != 0) {
+         throw myex;
+      }
+
       // Create a context with devices from the first platform
       cl::Context context(devices[0]);
 
    }
    catch(cl::Error e) {
       printf("%s : Error code %d\n", e.what(), e.err());
+   }
+   catch(std::exception& e) {
+     printf("%s \n", e.what());
    }
 
    return 0;

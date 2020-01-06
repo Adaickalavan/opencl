@@ -5,19 +5,18 @@
 #include <iostream>
 #include <iterator>
 
-// #ifdef MAC
-// #include <OpenCL/cl2.hpp>
-// #else
-#include <CL/cl2.hpp>
-// #endif
+#ifdef MAC
+   #include <OpenCL/cl2.hpp>
+#else
+   #include <CL/cl2.hpp>
+#endif
 
-#define CL_HPP_NO_STD_VECTOR
+// #define CL_HPP_NO_STD_VECTOR
 
 int main(void) {
    
    cl::vector<cl::Platform> platforms;
    cl::vector<cl::Device> devices;
-   cl::vector<cl::Kernel> allKernels;
    std::string kernelName;
 
    try {
@@ -31,16 +30,28 @@ int main(void) {
       std::string programString(std::istreambuf_iterator<char>(programFile),
             (std::istreambuf_iterator<char>()));
 
-      cl::Program::Sources source(1, std::make_pair(programString.c_str(),
-            programString.length()+1));
+      // Old method
+      // cl::Program::Sources source(1, std::make_pair(programString.c_str(), programString.length()+1));
 
-      // cl::Program::Sources source (1,{programString.c_str(),programString.length()+1});
+      // New simpler string interface style
+      cl::Program::Sources source;
+      source.push_back(programString.c_str());      
 
-      // cl::Program::Sources source;
-      // source.push_back({programString.c_str(),programString.length()+1});      
-
+      // Build the program
       cl::Program program(context, source);
-      program.build(devices);
+      const char* options = "-cl-std=CL2.0";
+      try {
+         program.build(devices, options = options);
+      }
+      catch (...) {
+        // Print build info for all devices
+        cl_int buildErr;
+        cl::BuildLogType buildInfo = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(&buildErr);
+        for (auto &pair : buildInfo) {
+            fprintf(stderr, "%s %s", pair.first.getInfo<CL_DEVICE_NAME>().c_str(), pair.second.c_str());
+        }
+        return 1;
+      }
 
       // Create individual kernels
       cl::Kernel addKernel(program, "add");
@@ -48,6 +59,7 @@ int main(void) {
       cl::Kernel multKernel(program, "multiply");
 
       // Create all kernels in program
+      cl::vector<cl::Kernel> allKernels;
       program.createKernels(&allKernels);
       for(unsigned int i=0; i<allKernels.size(); i++) {
          kernelName = allKernels[i].getInfo<CL_KERNEL_FUNCTION_NAME>();

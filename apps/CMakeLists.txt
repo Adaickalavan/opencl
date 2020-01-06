@@ -137,8 +137,8 @@ find_package(OpenCL REQUIRED)
 # target_include_directories(mutex PRIVATE ../libs/util/)
 
 # Ch8.1 (full_context)
-# add_executable(full_context ./Ch8/full_context.cpp)
-# target_link_libraries(full_context PRIVATE OpenCL::OpenCL)
+add_executable(full_context ./Ch8/full_context.cpp)
+target_link_libraries(full_context PRIVATE OpenCL::OpenCL)
 
 # Ch8.2 (create_kernels)
 add_executable(create_kernels ./Ch8/create_kernels.cpp)
