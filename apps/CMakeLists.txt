@@ -143,3 +143,7 @@ target_link_libraries(full_context PRIVATE OpenCL::OpenCL)
 # Ch8.2 (create_kernels)
 add_executable(create_kernels ./Ch8/create_kernels.cpp)
 target_link_libraries(create_kernels PRIVATE OpenCL::OpenCL)
+
+# Ch8.3 (sub_buffer)
+add_executable(sub_buffer ./Ch8/sub_buffer.cpp)
+target_link_libraries(sub_buffer PRIVATE OpenCL::OpenCL)

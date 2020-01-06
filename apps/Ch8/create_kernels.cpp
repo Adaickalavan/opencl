@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <exception>
 
 #ifdef MAC
    #include <OpenCL/cl2.hpp>
@@ -61,13 +62,17 @@ int main(void) {
       // Create all kernels in program
       cl::vector<cl::Kernel> allKernels;
       program.createKernels(&allKernels);
-      for(unsigned int i=0; i<allKernels.size(); i++) {
-         kernelName = allKernels[i].getInfo<CL_KERNEL_FUNCTION_NAME>();
-         std::cout << "Kernel: " << kernelName << std::endl;
+      // for(unsigned int i=0; i<allKernels.size(); i++) {
+      for(auto &k : allKernels) {
+         kernelName = k.getInfo<CL_KERNEL_FUNCTION_NAME>();
+         printf("Kernel: %s\n", kernelName.c_str());
       }
    }
    catch(cl::Error e) {
-      std::cout << e.what() << ": Error code " << e.err() << std::endl;   
+      printf("%s : Error code %d\n", e.what(), e.err());
+   }
+   catch(std::exception& e) {
+      fprintf(stderr, "%s \n", e.what());
    }
 
    return 0;

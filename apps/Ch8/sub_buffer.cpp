@@ -1,6 +1,7 @@
-#define __CL_ENABLE_EXCEPTIONS
-#define __NO_STD_VECTOR
-#define PROGRAM_FILE "sub_buffer.cl"
+#define CL_HPP_ENABLE_EXCEPTIONS 
+#define CL_HPP_TARGET_OPENCL_VERSION 200
+// #define __NO_STD_VECTOR
+#define PROGRAM_FILE "./apps/Ch8/sub_buffer.cl"
 #define KERNEL_FUNC "sub_buffer"
 
 #include <fstream>
@@ -8,9 +9,9 @@
 #include <iterator>
 
 #ifdef MAC
-#include <OpenCL/cl.hpp>
+    #include <OpenCL/cl2.hpp>
 #else
-#include <CL/cl.hpp>
+    #include <CL/cl2.hpp>
 #endif
 
 int main(void) {
@@ -32,8 +33,10 @@ int main(void) {
       std::ifstream programFile(PROGRAM_FILE);
       std::string programString(std::istreambuf_iterator<char>(programFile),
             (std::istreambuf_iterator<char>()));
-      cl::Program::Sources source(1, std::make_pair(programString.c_str(),
-            programString.length()+1));
+      // cl::Program::Sources source(1, std::make_pair(programString.c_str(),
+      //       programString.length()+1));
+      cl::Program::Sources source;
+      source.push_back(programString.c_str());           
       cl::Program program(context, source);
       program.build(devices);
       cl::Kernel kernel(program, KERNEL_FUNC);
