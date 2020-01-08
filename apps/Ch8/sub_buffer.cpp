@@ -26,7 +26,7 @@ int main(void) {
    try {
       // Place the GPU devices of the first platform into a context
       cl::Platform::get(&platforms);
-      platforms[0].getDevices(CL_DEVICE_TYPE_GPU, &devices);
+      platforms[0].getDevices(CL_DEVICE_TYPE_CPU, &devices);
       cl::Context context(devices);
       
       // Create kernel
@@ -43,13 +43,13 @@ int main(void) {
 
       // Create main buffer and make it the kernel's first argument
       cl::Buffer mainBuffer(context, 
-            CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(data), data);
+            CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, sizeof(data), data);
       kernel.setArg(0, mainBuffer);
 
       // Create sub-buffer and make it the kernel's second argument
-      size_t config[2] = {70*sizeof(float), 20*sizeof(float)};
+      size_t config[2] = {64*sizeof(float), 10*sizeof(float)};
       subBuffer = mainBuffer.createSubBuffer(
-            CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, 
+            CL_MEM_READ_ONLY , 
             CL_BUFFER_CREATE_TYPE_REGION, (void*)config);
       kernel.setArg(1, subBuffer);
 
@@ -62,6 +62,8 @@ int main(void) {
             << subBuffer.getInfo<CL_MEM_SIZE>() << std::endl;
       std::cout << "Sub-buffer memory location: " 
             << subBuffer.getInfo<CL_MEM_HOST_PTR>() << std::endl;
+      /* Print the address of the main data */
+      printf("Main array address: %p\n", data);
    }
    catch(cl::Error e) {
       std::cout << e.what() << ": Error code " << e.err() << std::endl;   

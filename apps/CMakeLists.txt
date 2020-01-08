@@ -19,7 +19,7 @@ find_package(OpenCL REQUIRED)
 # add_executable(context_count ./Ch2/context_count.c)
 # target_link_libraries(context_count PRIVATE OpenCL::OpenCL)
 
-# # Ch3.1 (buffer_check)
+# # Ch3.1 (buffer_check) -- have issues
 # add_executable(buffer_check ./Ch3/buffer_check.c)
 # target_link_libraries(buffer_check PRIVATE OpenCL::OpenCL)
 
@@ -144,6 +144,10 @@ target_link_libraries(full_context PRIVATE OpenCL::OpenCL)
 add_executable(create_kernels ./Ch8/create_kernels.cpp)
 target_link_libraries(create_kernels PRIVATE OpenCL::OpenCL)
 
-# Ch8.3 (sub_buffer)
-add_executable(sub_buffer ./Ch8/sub_buffer.cpp)
-target_link_libraries(sub_buffer PRIVATE OpenCL::OpenCL)
+# # Ch8.3 (sub_buffer) -- have issues
+# add_executable(sub_buffer ./Ch8/sub_buffer.cpp)
+# target_link_libraries(sub_buffer PRIVATE OpenCL::OpenCL)
+
+# Ch8.4 (buffer_test)
+add_executable(buffer_test ./Ch8/buffer_test.cpp)
+target_link_libraries(buffer_test PRIVATE OpenCL::OpenCL)
