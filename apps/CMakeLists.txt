@@ -136,18 +136,22 @@ find_package(OpenCL REQUIRED)
 # target_link_libraries(mutex PRIVATE util)
 # target_include_directories(mutex PRIVATE ../libs/util/)
 
-# Ch8.1 (full_context)
-add_executable(full_context ./Ch8/full_context.cpp)
-target_link_libraries(full_context PRIVATE OpenCL::OpenCL)
+# Ch8.1 (full_context_8_1)
+add_executable(full_context_8_1 ./Ch8/full_context.cpp)
+target_link_libraries(full_context_8_1 PRIVATE OpenCL::OpenCL)
 
-# Ch8.2 (create_kernels)
-add_executable(create_kernels ./Ch8/create_kernels.cpp)
-target_link_libraries(create_kernels PRIVATE OpenCL::OpenCL)
+# Ch8.2 (create_kernels_8_2)
+add_executable(create_kernels_8_2 ./Ch8/create_kernels.cpp)
+target_link_libraries(create_kernels_8_2 PRIVATE OpenCL::OpenCL)
 
-# # Ch8.3 (sub_buffer) -- have issues
-# add_executable(sub_buffer ./Ch8/sub_buffer.cpp)
-# target_link_libraries(sub_buffer PRIVATE OpenCL::OpenCL)
+# # Ch8.3 (sub_buffer_8_3) -- have issues
+# add_executable(sub_buffer_8_3 ./Ch8/sub_buffer.cpp)
+# target_link_libraries(sub_buffer_8_3 PRIVATE OpenCL::OpenCL)
 
-# Ch8.4 (buffer_test)
-add_executable(buffer_test ./Ch8/buffer_test.cpp)
-target_link_libraries(buffer_test PRIVATE OpenCL::OpenCL)
+# Ch8.4 (buffer_test_8_4)
+add_executable(buffer_test_8_4 ./Ch8/buffer_test.cpp)
+target_link_libraries(buffer_test_8_4 PRIVATE OpenCL::OpenCL)
+
+# Ch8.5 (callback_8_5)
+add_executable(callback_8_5 ./Ch8/callback.cpp)
+target_link_libraries(callback_8_5 PRIVATE OpenCL::OpenCL)
