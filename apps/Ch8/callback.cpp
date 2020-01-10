@@ -41,6 +41,7 @@ int main(void) {
    cl::vector<cl::Device> devices;
    cl::Event callbackEvent;
    int i, data[100];
+   int out[100];
 
    try {
       // Initialize data
@@ -81,11 +82,11 @@ int main(void) {
          global_size, local_size);
 
       // Read output buffer from kernel
-      queue.enqueueReadBuffer(buffer, CL_FALSE, 0, sizeof(data), 
-            data, NULL, &callbackEvent);
+      queue.enqueueReadBuffer(buffer, CL_FALSE, 0, sizeof(out), 
+            out, NULL, &callbackEvent);
 
       // Set callback function
-      callbackEvent.setCallback(CL_COMPLETE, &checkData, (void*)data);
+      callbackEvent.setCallback(CL_COMPLETE, &checkData, (void*)out);
    }
    catch(cl::Error e) {
       std::cout << e.what() << ": Error code " << e.err() << std::endl;   

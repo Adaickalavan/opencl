@@ -152,6 +152,18 @@ target_link_libraries(create_kernels_8_2 PRIVATE OpenCL::OpenCL)
 add_executable(buffer_test_8_4 ./Ch8/buffer_test.cpp)
 target_link_libraries(buffer_test_8_4 PRIVATE OpenCL::OpenCL)
 
-# Ch8.5 (callback_8_5)
-add_executable(callback_8_5 ./Ch8/callback.cpp)
-target_link_libraries(callback_8_5 PRIVATE OpenCL::OpenCL)
+# Ch8.5 (map_copy_8_5)
+add_executable(map_copy_8_5 ./Ch8/map_copy.cpp)
+target_link_libraries(map_copy_8_5 PRIVATE OpenCL::OpenCL)
+
+# Ch8.6 (callback_8_6)
+add_executable(callback_8_6 ./Ch8/callback.cpp)
+target_link_libraries(callback_8_6 PRIVATE OpenCL::OpenCL)
+
+# Ch8.7 (user_event_8_7)
+add_executable(user_event_8_7 ./Ch8/user_event.cpp)
+target_link_libraries(user_event_8_7 PRIVATE OpenCL::OpenCL)
+
+# Ch8.8 (profile_8_8)
+add_executable(profile_8_8 ./Ch8/profile.cpp)
+target_link_libraries(profile_8_8 PRIVATE OpenCL::OpenCL)

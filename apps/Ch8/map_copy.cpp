@@ -1,6 +1,7 @@
-#define __CL_ENABLE_EXCEPTIONS
-#define __NO_STD_VECTOR
-#define PROGRAM_FILE "blank.cl"
+#define CL_HPP_ENABLE_EXCEPTIONS 
+#define CL_HPP_TARGET_OPENCL_VERSION 200
+// #define __NO_STD_VECTOR
+#define PROGRAM_FILE "./apps/Ch8/map_copy.cl"
 #define KERNEL_FUNC "blank"
 
 #include <cstdio>
@@ -9,9 +10,9 @@
 #include <iterator>
 
 #ifdef MAC
-#include <OpenCL/cl.hpp>
+#include <OpenCL/cl2.hpp>
 #else
-#include <CL/cl.hpp>
+#include <CL/cl2.hpp>
 #endif
 
 int main(void) {
@@ -34,15 +35,17 @@ int main(void) {
 
       // Place the GPU devices of the first platform into a context
       cl::Platform::get(&platforms);
-      platforms[0].getDevices(CL_DEVICE_TYPE_GPU, &devices);
+      platforms[0].getDevices(CL_DEVICE_TYPE_CPU, &devices);
       cl::Context context(devices);
       
       // Create kernel
       std::ifstream programFile(PROGRAM_FILE);
       std::string programString(std::istreambuf_iterator<char>(programFile),
             (std::istreambuf_iterator<char>()));
-      cl::Program::Sources source(1, std::make_pair(programString.c_str(),
-            programString.length()+1));
+      // cl::Program::Sources source(1, std::make_pair(programString.c_str(),
+      //       programString.length()+1));
+      cl::Program::Sources source;
+         source.push_back(programString.c_str());      
       cl::Program program(context, source);
       program.build(devices);
       cl::Kernel kernel(program, KERNEL_FUNC);
@@ -61,7 +64,12 @@ int main(void) {
 
       // Create queue and enqueue kernel-execution command
       cl::CommandQueue queue(context, devices[0]);
-      queue.enqueueTask(kernel);
+      // queue.enqueueTask(kernel);
+      cl::NDRange global_offset(0);
+      cl::NDRange global_size(1);
+      cl::NDRange local_size = cl::NullRange;
+      queue.enqueueNDRangeKernel(kernel, global_offset, 
+         global_size, local_size);
 
       // Copy Buffer A to Buffer B
       queue.enqueueCopyBuffer(bufferA, bufferB, 0, 0, sizeof(dataA));
